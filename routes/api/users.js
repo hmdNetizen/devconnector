@@ -1,7 +1,9 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const router = express.Router();
 const gravatar = require("gravatar");
+const config = require("config");
 const { body, validationResult } = require("express-validator");
 const User = require("../../models/User");
 
@@ -44,7 +46,21 @@ router.post(
 
       await user.save();
 
-      res.send("Users Added");
+      const payload = {
+        user: {
+          id: user.id,
+        },
+      };
+
+      jwt.sign(
+        payload,
+        config.get("jwtSecret"),
+        { expiresIn: 36000 },
+        (err, token) => {
+          if (err) throw err;
+          res.json(token);
+        }
+      );
     } catch (error) {
       console.error(error.message);
       res.status(500).send("Unknown Server Error!");
