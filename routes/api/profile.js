@@ -1,4 +1,6 @@
 const express = require("express");
+const config = require("config");
+const request = require("request");
 const router = express.Router();
 const Profile = require("../../models/Profile");
 const User = require("../../models/User");
@@ -217,5 +219,140 @@ router.put(
     }
   }
 );
+
+// @TYPE     PUT /api/profile/experience/:expId
+// @Desc     Delete Experience
+// @access   Private
+router.delete("/experience/:expId", auth, async (req, res) => {
+  try {
+    const profile = await Profile.findOne({ user: req.user.id });
+
+    // get the experience index
+    const removeIndex = profile.experience
+      .map((experience) => experience.id)
+      .indexOf(req.params.expId);
+
+    profile.experience.splice(removeIndex, 1);
+
+    await profile.save();
+
+    res.json(profile);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Unknown Server Error!");
+  }
+});
+
+// @TYPE     PUT /api/profile/experience
+// @Desc     Add experience
+// @access   Private
+router.put(
+  "/education",
+  [
+    auth,
+    [
+      body("school", "School is required").not().isEmpty(),
+      body("degree", "Degree is required").not().isEmpty(),
+      body("fieldofstudy", "Field of study is required").not().isEmpty(),
+      body("from", "From is required").not().isEmpty(),
+    ],
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty())
+      return res.status(400).json({ errors: errors.array() });
+
+    const {
+      school,
+      degree,
+      fieldofstudy,
+      from,
+      to,
+      current,
+      description,
+    } = req.body;
+
+    const newEdu = {
+      school,
+      degree,
+      fieldofstudy,
+      from,
+      to,
+      current,
+      description,
+    };
+
+    try {
+      const profile = await Profile.findOne({ user: req.user.id });
+
+      if (!profile) return res.status(400).json({ msg: "Profile not found" });
+
+      profile.education.unshift(newEdu);
+
+      await profile.save();
+
+      res.json(profile);
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).send("Unknown Server Error!");
+    }
+  }
+);
+
+// @TYPE     PUT /api/profile/experience/:expId
+// @Desc     Delete Experience
+// @access   Private
+
+router.delete("/education/:eduId", auth, async (req, res) => {
+  try {
+    const profile = await Profile.findOne({ user: req.user.id });
+
+    if (!profile) return res.status(400).json({ msg: "Profile is not found" });
+
+    const removeIndex = profile.education
+      .map((education) => education.id)
+      .indexOf(req.params.eduId);
+
+    profile.education.splice(removeIndex, 1);
+
+    await profile.save();
+
+    res.json(profile);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Unknown Server Error!");
+  }
+});
+
+// @TYPE     GET /api/profile/github/:username
+// @Desc     Fetch Github repos from github
+// @access   Public
+
+router.get("/github/:username", (req, res) => {
+  try {
+    const options = {
+      uri: `https://api.github.com/users/${
+        req.params.username
+      }/repos?per_page=5&sort=created:asc&client_id=${config.get(
+        "githubClientId"
+      )}&client_secret=${config.get("githubSecret")}`,
+      method: "GET",
+      headers: { "user-agent": "node.js" },
+    };
+
+    request(options, (error, response, body) => {
+      if (error) console.error(error);
+
+      if (response.statusCode !== 200)
+        return res.status(404).json({ msg: "No github profile found" });
+
+      res.json(body);
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server Error!");
+  }
+});
 
 module.exports = router;
