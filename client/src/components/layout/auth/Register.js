@@ -27,20 +27,16 @@ const Register = () => {
       password,
     };
 
-    const config = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-
-    const body = JSON.stringify(newUser);
-
     try {
-      const res = await axios.post(
-        "http://localhost:5000/api/users",
-        body,
-        config
-      );
+      const config = {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      };
+
+      const body = JSON.stringify(newUser);
+
+      const res = await axios.post("/api/users", body, config);
       console.log(res.data);
     } catch (error) {
       console.error(error.message);
